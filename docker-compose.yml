@@ -118,9 +118,11 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      # Plain HTTP GET of the Next.js server's root, via node (no curl/wget
-      # in node:20-slim). Exit 0 on any < 400 status.
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000',res=>process.exit(res.statusCode<400?0:1)).on('error',()=>process.exit(1))\""]
+      # Plain HTTP GET of the Next.js server's root, via Node's stdlib http
+      # (node:20-slim ships neither curl nor wget). Exit 0 on any < 500
+      # status. The CI Phase-3 wait requires `web` to report healthy — without
+      # this declaration web stays "running" forever and the workflow times out.
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 10s
       timeout: 10s
       retries: 10

@@ -132,7 +132,9 @@ confidence):
 
 **Browser demo** — open the UI:
 
-- RAG (cited answer): <http://localhost:3000/rag>
+- RAG (cited answer): <http://localhost:3000/rag> — submit the seeded
+  question **“Find Sichuan recipes that use ginger”** and observe a
+  rendered answer with at least one inline `[N]` citation marker.
 - Entity extraction: <http://localhost:3000/extract>
 - Knowledge-graph query: <http://localhost:3000/kg>
 
