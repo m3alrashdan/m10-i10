@@ -10,7 +10,6 @@ Discipline gates the autograder enforces:
   within 2 seconds; failure → 503.
 - `/healthz` does NOT touch Neo4j or Weaviate.
 """
-import os
 from contextlib import asynccontextmanager
 
 import spacy
@@ -35,17 +34,22 @@ from .models import (
 )
 from .nlp import extract_entities
 from .rag import compose_rag
+from .settings import Settings
 from .w9b_mapper.errors import UnsupportedQueryError
 from .w9b_mapper.shapes import SUPPORTED_PATTERNS
 
 
+settings = Settings()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.settings = settings
     app.state.neo4j_driver = GraphDatabase.driver(
-        os.environ["NEO4J_URI"],
-        auth=(os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"]),
+        settings.neo4j_uri,
+        auth=(settings.neo4j_user, settings.neo4j_password),
     )
-    app.state.weaviate_client = weaviate.Client(os.environ["WEAVIATE_URL"])
+    app.state.weaviate_client = weaviate.Client(settings.weaviate_url)
     app.state.nlp = spacy.load("en_core_web_sm")
     app.state.generator = load_generator()
     # Same sentence-transformers model the seed used at ingest. The
@@ -59,7 +63,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="M10 Recipe Service", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.environ.get("WEB_ORIGIN", "http://localhost:3000")],
+    allow_origins=[settings.web_origin],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
