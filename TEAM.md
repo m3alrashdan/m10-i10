@@ -8,20 +8,20 @@ This file is the team roster artifact for the Module 10 four-service Docker Comp
 
 ## Team Identity
 
-- **Team name:** _(team-chosen identifier — e.g., `team-aurora`)_
-- **Team Slack channel:** _(cohort Slack channel — e.g., `#m10-team-aurora`)_
-- **Team-formation date:** _(YYYY-MM-DD — the date the instructional team posted the roster)_
-- **Designated team submitter:** _(role token — typically `Infra-Integration lead`)_
+- **Team name:** alnashamaa
+- **Team Slack channel:** `alnashamaa`
+- **Team-formation date:** 2026-06-24
+- **Designated team submitter:** `Infra-Integration lead`
 
 ---
 
 ## Team Roster
 
-| Role | Team Member identifier | Assigned by | Branch | Internal-PR reviewer | Primary files owned |
-|---|---|---|---|---|---|
-| Backend lead | _(initials or anon ID)_ | Instructional team | `backend/api-endpoints` | Frontend lead | `api/main.py`, `api/models.py`, `api/rag.py`, `api/deps.py`, `api/Dockerfile` |
-| Frontend lead | _(initials or anon ID)_ | Instructional team | `frontend/nextjs-pages` | Backend lead | `web/pages/{extract,kg,rag}.tsx`, `web/lib/types.ts`, `web/Dockerfile`, `tests/frontend/playwright/*` |
-| Infra-Integration lead | _(initials or anon ID)_ | Instructional team | `infra/docker-compose` | Backend lead | `docker-compose.yml`, `seed_neo4j.sh`, `seed_weaviate.sh`, `.env.example`, `README.md`, `tests/integration/*` |
+| Role                   | Team Member identifier | Assigned by        | Branch                    | Internal-PR reviewer | Primary files owned                                                                                                       |
+| ---------------------- | ---------------------- | ------------------ | ------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Backend lead           | `be-01`              | Instructional team | `backend/api-endpoints` | Frontend lead        | `api/main.py`, `api/models.py`, `api/rag.py`, `api/deps.py`, `api/Dockerfile`                                   |
+| Frontend lead          | `fe-01`              | Instructional team | `frontend/nextjs-pages` | Backend lead         | `web/pages/{extract,kg,rag}.tsx`, `web/lib/types.ts`, `web/Dockerfile`, `tests/frontend/playwright/*`             |
+| Infra-Integration lead | `infra-01`           | Instructional team | `infra/docker-compose`  | Backend lead         | `docker-compose.yml`, `seed_neo4j.sh`, `seed_weaviate.sh`, `.env.example`, `README.md`, `tests/integration/*` |
 
 **Fallback compositions for non-3-Team-Member teams:**
 
@@ -53,12 +53,12 @@ The TA cross-references this checklist against `git log --author=<email>` on the
 
 ### Infra-Integration lead
 
-- [ ] `docker-compose.yml` — four services, healthchecks, `depends_on` chain, named volumes
-- [ ] `seed_neo4j.sh`
-- [ ] `seed_weaviate.sh`
-- [ ] `.env.example` (no real credentials)
-- [ ] `README.md` runbook
-- [ ] `tests/integration/test_stack_e2e.py`
+- [X] `docker-compose.yml` — four services, healthchecks, `depends_on` chain, named volumes
+- [X] `seed_neo4j.sh`
+- [X] `seed_weaviate.sh`
+- [X] `.env.example` (no real credentials)
+- [X] `README.md` runbook
+- [X] `tests/integration/test_stack_e2e.py`
 
 ---
 
@@ -92,4 +92,4 @@ When all three role branches merge to the team fork's `main` and `docker compose
 1. The team submitter pastes the team fork URL into TalentLMS → Module 10 → Integration Task.
 2. Each Team Member separately submits the participation-confirmation TalentLMS unit naming their assigned role and the files they authored.
 
-The two-tier grading model (team tier 60 pts + per-role tier 40 pts) is described in the team-facing Integration Spec at <https://LevelUp-Applied-AI.github.io/aispire-14005-pages/modules/module-10/4ba363ed>.
+The two-tier grading model (team tier 60 pts + per-role tier 40 pts) is described in the team-facing Integration Spec at [https://LevelUp-Applied-AI.github.io/aispire-14005-pages/modules/module-10/4ba363ed](https://LevelUp-Applied-AI.github.io/aispire-14005-pages/modules/module-10/4ba363ed).
