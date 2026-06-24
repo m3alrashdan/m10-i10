@@ -91,14 +91,16 @@ services:
     healthcheck:
       # /readyz probes Neo4j (RETURN 1) AND Weaviate (is_ready) → 503 if
       # either is down. urllib raises on non-2xx, so a 503 fails the check.
-      # Generous start_period: the api lifespan loads spaCy en_core_web_sm,
-      # flan-t5-base, and all-MiniLM-L6-v2 — a cold model cache downloads
-      # ~1 GB on the first boot.
+      # start_period 180s (per spec) covers the cold HuggingFace cache: the
+      # api lifespan loads spaCy en_core_web_sm, flan-t5-base, and
+      # all-MiniLM-L6-v2 (~1 GB on first boot). retries 24 keeps a wide
+      # local margin without affecting the ordering (api never starts until
+      # neo4j+weaviate are healthy, so it cannot go healthy out of order).
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=5)\""]
       interval: 10s
       timeout: 10s
-      retries: 12
-      start_period: 240s
+      retries: 24
+      start_period: 180s
 
   web:
     build:
