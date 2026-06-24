@@ -62,132 +62,140 @@ The TA cross-references this checklist against `git log --author=<email>` on the
 
 ---
 
-## Execution Plan — خطة التنفيذ العملية (Team Working Agreement)
+## Execution Plan — Team Working Agreement
 
-خطة واضحة وملزِمة للأقسام الثلاثة. الهدف: كل عضو يعرف شغله بالضبط، ولا يحصل
-تداخل (role drift) ولا كسر عقود بين الأقسام. كل المصطلحات التقنية (أسماء
-الملفات، الأوامر، الحقول، الفروع) بالإنجليزية عشان تبقى قابلة للمرجعة من الـ TA.
+A clear, binding plan for all three roles. Goal: every member knows exactly
+what they own, with no role drift and no broken cross-role contracts.
 
-### A) لقطة الحالة (Status snapshot)
+### A) Status snapshot
 
-| القسم | الفرع | الحالة | الإجراء التالي |
+| Role | Branch | Status | Next action |
 |---|---|---|---|
-| **Infra-Integration** | `infra/docker-compose` | ✅ مكتمل ومرفوع، متحقّق end-to-end | فتح internal PR → main، كتابة فقرة المساهمة |
-| **Frontend** | `frontend/nextjs-pages` | 🔴 ناقص: الـ 3 Playwright specs لسا `test.skip` فاضية | **كتابة الـ 3 specs** (أولوية قصوى — توقف التسليم) |
-| **Backend** | `backend/api-endpoints` | 🟢 شغّال (baseline أخضر) | امتلاك/فهم `api/`، تثبيت العقد، مراجعة PR تبع Infra و Frontend |
+| **Infra-Integration** | `infra/docker-compose` | ✅ Complete & pushed, verified end-to-end | Open internal PR → main; write contribution paragraph |
+| **Frontend** | `frontend/nextjs-pages` | 🔴 Outstanding: the 3 Playwright specs are still empty `test.skip` stubs | **Author the 3 specs** (top priority — blocks submission) |
+| **Backend** | `backend/api-endpoints` | 🟢 Working (baseline green) | Own/understand `api/`, freeze the contract, review Infra & Frontend PRs |
 
-### B) حدود الملكية — لا أحد يلمس ملفات قسم آخر (يمنع role drift)
+### B) Ownership boundaries — nobody touches another role's files (anti role-drift)
 
-| الملفات | المالك | ممنوع يلمسها |
+| Files | Owner | Must NOT touch |
 |---|---|---|
 | `api/main.py`, `api/models.py`, `api/rag.py`, `api/deps.py`, `api/Dockerfile` | **Backend** | Frontend, Infra |
 | `web/pages/{extract,kg,rag}.tsx`, `web/lib/types.ts`, `web/Dockerfile`, `tests/frontend/playwright/*` | **Frontend** | Backend, Infra |
 | `docker-compose.yml`, `.env.example`, `scripts/*`, `README.md`, `tests/integration/*`, `TEAM.md`, `CONTRIBUTING.md` | **Infra** | Backend, Frontend |
 
-> الفروع لا يُعاد تسميتها — الـ autograder و سكربتات الـ TA تبحث عنها بالاسم الحرفي.
+> Do not rename the branches — the autograder and the TA cross-reference
+> scripts look for these exact names.
 
-### C) العقود المشتركة المقفولة (Locked contracts) — خط أحمر
+### C) Locked contracts — the red lines
 
-**Contract A — Backend ↔ Frontend (الأخطر):** أسماء حقول Pydantic في
-`api/models.py` تطابق `web/lib/types.ts` **حرف بحرف**. الحقول المقفولة:
+**Contract A — Backend ↔ Frontend (most critical):** the Pydantic field
+names in `api/models.py` must match `web/lib/types.ts` **field-for-field**.
+Locked fields:
 
 ```
 chunk_id · score · answer · citations · confidence ·
 cypher · rows · count · text · label · start · end · entities
 ```
 
-> أي rename (مثل `chunk_id → chunkId`) = كسر صامت للفرونت يظهر فقط في مرحلة
-> Playwright عند التسليم. القاعدة: **يُعلَن على Slack قبل الدمج**، والـ Frontend
-> يحدّث `types.ts` في نفس دورة المراجعة.
+> Any rename (e.g. `chunk_id → chunkId`) is a silent frontend break that
+> only surfaces at the Playwright stage during submission. Rule: **announce
+> on Slack before merge**, and the Frontend lead updates `types.ts` in the
+> same review cycle.
 
-**Contract B — Infra ↔ Backend (مثبّت ومرفوع):**
+**Contract B — Infra ↔ Backend (fixed & pushed):**
 
 ```
-NEO4J_URI=bolt://neo4j:7687      WEAVIATE_URL=http://weaviate:8080
-WEB_ORIGIN=http://localhost:3000  NEXT_PUBLIC_API_URL=http://localhost:8000 (build-arg)
+NEO4J_URI=bolt://neo4j:7687       WEAVIATE_URL=http://weaviate:8080
+WEB_ORIGIN=http://localhost:3000   NEXT_PUBLIC_API_URL=http://localhost:8000 (build-arg)
 ```
 
-> CORS لازم يبقى `localhost:3000` (مش `web:3000`). أي تغيير env يُعلَن لـ Infra قبل الدمج.
+> CORS must stay `localhost:3000` (never `web:3000`). Any env change is
+> announced to Infra before merge.
 
-### D) خطة كل قسم بالتفصيل
+### D) Per-role plan in detail
 
 #### 🟦 Backend lead — `backend/api-endpoints`
-- **المهام:** امتلاك وفهم `api/` (شغّال أصلاً)؛ تثبيت العقد؛ تحسينات اختيارية
-  (per-call timeout على الـ generator، structured logging) **دون** إضعاف
-  grounding (يرجّع الـ sentinel لما تتعذّر الـ citations) و**دون** rename لأي حقل.
-- **ممنوع:** تغيير CMD في `api/Dockerfile` (يبقى `uvicorn api.main:app` من جذر
-  المشروع)؛ أي rename حقل بلا إعلان؛ ضبط `WEB_ORIGIN` على اسم خدمة Compose.
-- **Done عندما:** الـ endpoints الخمسة تعمل، الحقول مطابقة لـ `types.ts`، والتحقق:
+- **Tasks:** own and understand `api/` (already working); freeze the
+  contract; optional hardening (per-call generator timeout, structured
+  logging) **without** weakening grounding (must return the sentinel when
+  citations cannot be resolved) and **without** renaming any field.
+- **Must not:** change the `api/Dockerfile` CMD (stays `uvicorn api.main:app`
+  from repo root); rename any field without announcing; set `WEB_ORIGIN` to
+  a Compose service name.
+- **Done when:** the five endpoints work, fields match `types.ts`, and:
   ```bash
   docker compose up -d --build
   curl -fsS -X POST localhost:8000/rag/answer -H 'Content-Type: application/json' \
     -d '{"question":"How do I prep ginger for stir-fry?"}'   # 200 + citations
   ```
-- **دور المراجعة:** يراجع `infra/*` و `frontend/*` (حارس العقد).
+- **Review duty:** reviews `infra/*` and `frontend/*` (contract guardian).
 
-#### 🟩 Frontend lead — `frontend/nextjs-pages` ⚠️ هنا الشغل الناقص
-- **المهمة الحرجة:** كتابة الـ 3 Playwright specs (حالياً stubs → اختبار
-  `test_playwright_spec_authored` أحمر ويوقف التسليم). حوّل `test.skip(` إلى
-  `test(` لأن الـ skip يمرّ بصمت = مرفوض:
-  - `rag.spec.ts`: افتح `/rag` → اكتب السؤال المزروع → submit → تحقّق من ظهور
-    نص الإجابة + **علامة citation واحدة على الأقل بصيغة `[N]`**.
-  - `extract.spec.ts`: افتح `/extract` → أدخل نص → تحقّق من ظهور entities
+#### 🟩 Frontend lead — `frontend/nextjs-pages` ⚠️ outstanding work is here
+- **Critical task:** author the 3 Playwright specs (currently stubs → the
+  `test_playwright_spec_authored` test is red and blocks submission). Turn
+  `test.skip(` into `test(` — a skipped test passes silently and is rejected:
+  - `rag.spec.ts`: open `/rag` → type the seeded question → submit → assert
+    the answer text renders **plus at least one `[N]`-style citation marker**.
+  - `extract.spec.ts`: open `/extract` → enter text → assert entities render
     (`text`/`label`/`start`/`end`).
-  - `kg.spec.ts`: افتح `/kg` → سؤال مدعوم → تحقّق من ظهور rows.
-- **تأكّد من:** مطابقة `types.ts` لـ Pydantic (مطابق حالياً ✅)؛ معالجة الصفحات
-  لأخطاء 422/503/network؛ وجود `.dockerignore` (حتى ما ينسخ `node_modules`).
-- **ممنوع:** ضبط `NEXT_PUBLIC_API_URL` على اسم خدمة Compose (لازم `localhost:8000`)؛
-  "إصلاح" `web/Dockerfile` لصيغة الـ Lab (الـ `node:20-slim` مقصود).
-- **Done عندما:** ضد stack شغّال + مزروع:
+  - `kg.spec.ts`: open `/kg` → a supported question → assert rows render.
+- **Confirm:** `types.ts` mirrors Pydantic (matches today ✅); pages handle
+  422/503/network errors; `.dockerignore` exists (so `node_modules` is not
+  copied into the image).
+- **Must not:** set `NEXT_PUBLIC_API_URL` to a Compose service name (must be
+  `localhost:8000`); "fix" `web/Dockerfile` back to the Lab pattern (the
+  `node:20-slim` base is intentional).
+- **Done when:** against a running + seeded stack:
   ```bash
   cd web && npm ci && npx playwright install --with-deps chromium
-  npx playwright test ../tests/frontend/playwright    # الـ 3 specs خضراء
+  npx playwright test ../tests/frontend/playwright    # the 3 specs green
   ```
 
-#### 🟨 Infra-Integration lead — `infra/docker-compose` ✅ مكتمل ومرفوع
-- `docker-compose.yml` (4 خدمات + healthchecks + depends_on chain + named volumes)،
-  `scripts/*` (idempotent)، `.env.example`، `README.md` runbook،
-  `tests/integration/test_stack_e2e.py`، `TEAM.md`، `CONTRIBUTING.md` — كلها
-  جاهزة ومتحقّقة end-to-end.
-- **المتبقّي:** فتح internal PR (مراجعة Backend) + كتابة per-role paragraph في التسليم.
-- **التحقق المحلي:**
+#### 🟨 Infra-Integration lead — `infra/docker-compose` ✅ complete & pushed
+- `docker-compose.yml` (4 services + healthchecks + depends_on chain + named
+  volumes), `scripts/*` (idempotent), `.env.example`, the `README.md` runbook,
+  `tests/integration/test_stack_e2e.py`, `TEAM.md`, `CONTRIBUTING.md` — all
+  done and verified end-to-end.
+- **Remaining:** open the internal PR (Backend review) + write the per-role
+  paragraph for the submission.
+- **Local verification:**
   ```bash
   docker compose up -d --build && bash scripts/healthcheck_stack.sh
   bash scripts/seed_neo4j.sh && bash scripts/seed_weaviate.sh
   pytest tests/ -q                              # structural
-  pytest tests/integration/test_stack_e2e.py -q # e2e (ضد stack شغّال)
+  pytest tests/integration/test_stack_e2e.py -q # e2e (against a running stack)
   ```
 
-### E) التسلسل وسير الـ PRs (يتجنّب التضارب)
+### E) Sequence & PR flow (avoids conflicts)
 
 ```
-المرحلة 1 — تجميد العقد:
-   Backend يثبّت أسماء حقول models.py ─► Frontend يؤكّد types.ts مطابق
-   (مطابقان حالياً — فقط لا تغيّروهما بلا إعلان)
+Phase 1 — freeze the contract:
+   Backend locks models.py field names ─► Frontend confirms types.ts matches
+   (they match today — just don't change them without announcing)
 
-المرحلة 2 — شغل متوازٍ على الفروع (ملفات منفصلة = صفر تعارض git):
-   Backend: امتلاك/تثبيت | Frontend: كتابة الـ 3 specs | Infra: ✅ خلص
+Phase 2 — parallel work on branches (disjoint files = zero git conflicts):
+   Backend: own/freeze | Frontend: author the 3 specs | Infra: ✅ done
 
-المرحلة 3 — internal PR لكل فرع (موافقة teammate واحدة على الأقل):
-   infra/*    → يراجعه Backend
-   frontend/* → يراجعه Backend
-   backend/*  → يراجعه Frontend
-   كل عضو يشغّل `docker compose up -d` محلياً قبل الموافقة
+Phase 3 — one internal PR per branch (≥ 1 teammate approval each):
+   infra/*    → reviewed by Backend
+   frontend/* → reviewed by Backend
+   backend/*  → reviewed by Frontend
+   every member runs `docker compose up -d` locally before approving
 
-المرحلة 4 — دمج الثلاثة على main ─► team submitter يفتح PR التسليم
+Phase 4 — merge all three into main ─► team submitter opens the submission PR
 ```
 
-### F) تشيك ليست التسليم النهائي (في وصف PR التسليم)
+### F) Final submission checklist (in the submission PR description)
 
-- [ ] مخرجات `docker compose ps` تُظهر الأربع خدمات `healthy`
-- [ ] مخرجات `seed_neo4j.sh` و `seed_weaviate.sh`
-- [ ] أمر curl على `/rag/answer` + رد 200 مع citations
-- [ ] **Screenshot** لصفحة `/rag` تعرض إجابة مع citation
-- [ ] روستر `TEAM.md` + فقرة مساهمة لكل عضو (تطابق `git log --author=<email>`)
-- [ ] كل عضو يعبّئ **Participation Confirmation** في TalentLMS (تحرّك 40 نقطة per-role)
+- [ ] `docker compose ps` output showing all four services `healthy`
+- [ ] Output of `seed_neo4j.sh` and `seed_weaviate.sh`
+- [ ] The `/rag/answer` curl command + its 200 response with citations
+- [ ] **Screenshot** of the `/rag` page rendering a cited answer
+- [ ] `TEAM.md` roster + one contribution paragraph per member (matches `git log --author=<email>`)
+- [ ] Each member files the **Participation Confirmation** in TalentLMS (drives the 40-pt per-role tier)
 
-> **القاعدة الذهبية للفريق كله:** لا rename لأي حقل بدون إعلان مسبق — هذا الفخ
-> رقم 1 الذي يكسر التسليم في مرحلة Playwright.
+> **Golden rule for the whole team:** no field rename without a prior
+> announcement — this is the #1 trap that breaks submission at the Playwright stage.
 
 ---
 
