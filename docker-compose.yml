@@ -1,33 +1,135 @@
-# Integration 10 — four-service stack.
+# Integration 10 — four-service Docker Compose stack.
 #
-# TODO (Infra-Integration lead): author this file.
+# Topology:  web ──depends_on(healthy)──▶ api ──depends_on(healthy)──▶ neo4j
+#                                                                 └──▶ weaviate
 #
-# Required services: api, web, neo4j, weaviate.
+# Bring-up order is enforced by healthcheck + `condition: service_healthy`:
+# the data tier (neo4j, weaviate) goes healthy first, then api (whose
+# /readyz probes both backends), then web. See README.md for the runbook.
 #
-# Per the Evaluation Methodology in integration-task-spec.md:
-# - Every service declares a healthcheck.
-# - `api.depends_on` includes both `neo4j` and `weaviate` with
-#   `condition: service_healthy`.
-# - `web.depends_on` includes `api` with `condition: service_healthy`.
-# - api build: long-form `context: .` + `dockerfile: api/Dockerfile`
-#   (NOT `build: ./api` — see reading Section 11; api container runs
-#   `uvicorn api.main:app` and needs repo-root context so package-
-#   relative imports resolve).
-# - api env: NEO4J_URI=bolt://neo4j:7687, WEAVIATE_URL=http://weaviate:8080,
-#           WEB_ORIGIN=${WEB_ORIGIN}.
-# - web NEXT_PUBLIC_API_URL=http://localhost:8000 must be a BUILD ARG
-#   (under `services.web.build.args`), not a runtime `environment:` entry.
-#   Next.js bakes NEXT_PUBLIC_* into the client bundle at build time; a
-#   runtime env var runs in the container but never reaches the browser.
-# - neo4j: image neo4j:5-community; NEO4J_dbms_memory_heap_max__size=1G,
-#          NEO4J_dbms_memory_pagecache_size=512M; named volume neo4j_data
-#          mounted at /data; healthcheck via cypher-shell.
-# - weaviate: image semitechnologies/weaviate:1.24.10; named volume
-#             weaviate_data mounted at /var/lib/weaviate;
-#             DEFAULT_VECTORIZER_MODULE=none; healthcheck via
-#             /v1/.well-known/ready.
-# - volumes block declares named neo4j_data and weaviate_data.
+# All four services sit on Compose's implicit default network, so
+# service-name DNS (`neo4j`, `weaviate`, `api`) resolves between
+# containers without an explicit `networks:` block.
 
-services: {}
+services:
+  # --- Data tier -----------------------------------------------------
+  neo4j:
+    image: neo4j:5-community
+    ports:
+      - "7687:7687"   # Bolt
+      - "7474:7474"   # HTTP browser
+    environment:
+      # user/password for the DB, interpolated from .env at parse time.
+      NEO4J_AUTH: ${NEO4J_AUTH}
+      # Memory caps so the container does not OOM a 16 GB laptop under load.
+      NEO4J_dbms_memory_heap_max__size: 1G
+      NEO4J_dbms_memory_pagecache_size: 512M
+    volumes:
+      # Named volume → graph survives `docker compose up`/`down`
+      # (but is intentionally wiped by `down -v`).
+      - neo4j_data:/data
+    healthcheck:
+      # cypher-shell proves the DB accepts auth AND answers a query.
+      # ${NEO4J_PASSWORD} is interpolated from .env by Compose at parse
+      # time — never hardcoded.
+      test: ["CMD-SHELL", "cypher-shell -u ${NEO4J_USER} -p ${NEO4J_PASSWORD} 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
 
-volumes: {}
+  weaviate:
+    image: semitechnologies/weaviate:1.24.10
+    ports:
+      - "8080:8080"
+    environment:
+      QUERY_DEFAULTS_LIMIT: "20"
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+      # `none` — vectors are supplied externally (the api/seed encode with
+      # sentence-transformers). A default vectorizer module here would
+      # cause silent insert failures against a vectorizer=none class.
+      DEFAULT_VECTORIZER_MODULE: none
+      # Pin the gossip/raft node identity so single-node startup is
+      # deterministic. Without it, Weaviate's memberlist tries to
+      # auto-discover a private advertise IP and aborts with
+      # "No private IP address found" on hosts whose default bridge has
+      # no RFC-1918 address it recognizes.
+      CLUSTER_HOSTNAME: node1
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 20s
+
+  # --- Application tier ----------------------------------------------
+  api:
+    build:
+      # Long-form build: context is the repo ROOT (not ./api) so the
+      # package-relative imports in api/main.py (`from .deps import ...`)
+      # resolve when the container runs `uvicorn api.main:app`.
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Service-name DNS, not localhost — the api talks to the sibling
+      # containers over the Compose network.
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      WEAVIATE_URL: http://weaviate:8080
+      WEB_ORIGIN: ${WEB_ORIGIN}
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      weaviate:
+        condition: service_healthy
+    healthcheck:
+      # /readyz probes Neo4j (RETURN 1) AND Weaviate (is_ready) → 503 if
+      # either is down. urllib raises on non-2xx, so a 503 fails the check.
+      # start_period 180s (per spec) covers the cold HuggingFace cache: the
+      # api lifespan loads spaCy en_core_web_sm, flan-t5-base, and
+      # all-MiniLM-L6-v2 (~1 GB on first boot). retries 24 keeps a wide
+      # local margin without affecting the ordering (api never starts until
+      # neo4j+weaviate are healthy, so it cannot go healthy out of order).
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=5)\""]
+      interval: 10s
+      timeout: 10s
+      retries: 24
+      start_period: 180s
+
+  web:
+    build:
+      # Context is ./web so the web Dockerfile's `COPY package*.json ./`
+      # finds the frontend package manifest.
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_API_URL is baked into the client bundle at BUILD
+        # time by Next.js — it must be a build arg, not a runtime env var,
+        # or it never reaches the browser. localhost (not http://api:8000)
+        # because the browser, not the container, makes the API call.
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      # Plain HTTP GET of the Next.js server's root, via Node's stdlib http
+      # (node:20-slim ships neither curl nor wget). Exit 0 on any < 500
+      # status. The CI Phase-3 wait requires `web` to report healthy — without
+      # this declaration web stays "running" forever and the workflow times out.
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  neo4j_data:
+  weaviate_data:

@@ -229,4 +229,8 @@ When all three role branches merge to the team fork's `main` and `docker compose
 1. The team submitter pastes the team fork URL into TalentLMS → Module 10 → Integration Task.
 2. Each Team Member separately submits the participation-confirmation TalentLMS unit naming their assigned role and the files they authored.
 
+HEAD
 The two-tier grading model (team tier 60 pts + per-role tier 40 pts) is described in the team-facing Integration Spec at [https://LevelUp-Applied-AI.github.io/aispire-14005-pages/modules/module-10/4ba363ed](https://LevelUp-Applied-AI.github.io/aispire-14005-pages/modules/module-10/4ba363ed).
+
+The two-tier grading model (team tier 60 pts + per-role tier 40 pts) is described in the team-facing Integration Spec at [https://LevelUp-Applied-AI.github.io/aispire-14005-pages/modules/module-10/4ba363ed](https://LevelUp-Applied-AI.github.io/aispire-14005-pages/modules/module-10/4ba363ed).
+

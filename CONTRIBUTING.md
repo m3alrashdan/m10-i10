@@ -110,3 +110,51 @@ The team is ready for team submission when:
 A Team Member "helping" by writing files outside their assigned role surface is a **role-drift event**. Role drift dilutes per-role attribution and makes per-role grading harder. If the Backend lead needs help with the Frontend, the right path is to ask the Frontend lead on Slack to address it, not to write the Frontend code themselves.
 
 If a Team Member is consistently blocked and the team is sliding into role drift, escalate to the TA per the Escalation Protocol — role rebalancing is a Support Instructor decision.
+
+---
+
+## Integration Decisions Log (Infra-Integration lead)
+
+Per the Contract-Change Protocol above, the Infra-Integration lead
+announces any DNS-, port-, or `.env`-affecting decision before it lands.
+The decisions below were taken on `infra/docker-compose` and announced to
+the Backend lead (the `infra/*` reviewer) during internal review.
+
+### Service-name DNS and ports
+
+| From | To (in-cluster) | Host publish |
+|---|---|---|
+| `api` → Neo4j | `bolt://neo4j:7687` | 7687, 7474 |
+| `api` → Weaviate | `http://weaviate:8080` | 8080 |
+| browser → `api` | — | 8000 |
+| browser → `web` | — | 3000 |
+
+The `api` and `web` containers reach the backends by Compose
+service-name DNS. `NEXT_PUBLIC_API_URL` is `http://localhost:8000`
+(baked as a **build arg**, not a runtime env) because the browser — not
+the `web` container — issues the API call.
+
+### Healthcheck strategy (one per service)
+
+- **neo4j** — `cypher-shell -u ${NEO4J_USER} -p ${NEO4J_PASSWORD} 'RETURN 1'`.
+  Password is interpolated from `.env` at parse time, never hardcoded.
+- **weaviate** — `wget --spider /v1/.well-known/ready`.
+- **api** — `GET /readyz` via Python's `urllib` (no curl/wget in
+  `python:3.11-slim`). A 503 (either backend down) fails the check.
+  `start_period: 240s` covers the first-boot model download (~1 GB).
+- **web** — `GET /` via Node's `http` module (no curl/wget in
+  `node:20-slim`).
+
+### `.env` / contract additions announced to Backend lead
+
+- **`api` env carries `NEO4J_USER` + `NEO4J_PASSWORD`** in addition to the
+  three contract vars (`NEO4J_URI`, `WEAVIATE_URL`, `WEB_ORIGIN`). The api
+  `lifespan` reads `os.environ["NEO4J_USER"]` / `["NEO4J_PASSWORD"]` to
+  build the Neo4j driver, so omitting them crashes startup. No api code
+  change required — these were already expected by `api/main.py`.
+- **`weaviate` env adds `CLUSTER_HOSTNAME=node1`.** Single-node Weaviate's
+  gossip/raft layer otherwise aborts on some hosts with "No private IP
+  address found" while auto-discovering an advertise address. Pinning the
+  node identity makes single-node startup deterministic across machines.
+  This is additive and does not change any contract surface the Backend or
+  Frontend lead consumes.
