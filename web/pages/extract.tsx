@@ -10,30 +10,41 @@ export default function ExtractPage() {
   const [loading, setLoading] = useState(false);
 
   async function submit() {
+    if (!text.trim()) {
+      setError("Please enter text to extract entities.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
+
     try {
       const r = await fetch(`${API_URL}/extract`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
+
       if (r.status === 422) {
         setError("Text shape rejected by validation (empty or > 5000 chars).");
         return;
       }
+
       if (r.status === 503) {
-        setError("Backend not ready. Try again in a moment.");
+        setError("The backend is starting up — please try again in a moment.");
         return;
       }
+
       if (!r.ok) {
         setError(`Unexpected status: ${r.status}`);
         return;
       }
-      setResult((await r.json()) as ExtractResponse);
-    } catch (e) {
-      setError("Network error reaching the backend.");
+
+      const data = (await r.json()) as ExtractResponse;
+      setResult(data);
+    } catch {
+      setError("Could not reach the backend.");
     } finally {
       setLoading(false);
     }
@@ -42,29 +53,46 @@ export default function ExtractPage() {
   return (
     <main>
       <h1>Extract — Named Entity Recognition</h1>
+
+      <label htmlFor="text">Text</label>
+
       <textarea
+        id="text"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Paste text to extract named entities from..."
         rows={6}
         cols={60}
       />
+
       <div>
-        <button onClick={submit} disabled={loading || !text}>
+        <button onClick={submit} disabled={loading || !text.trim()}>
           {loading ? "Extracting..." : "Extract"}
         </button>
       </div>
-      {error && <p role="alert" data-testid="error">{error}</p>}
+
+      {error && (
+        <p role="alert" data-testid="error">
+          {error}
+        </p>
+      )}
+
       {result && (
         <section>
           <h2>Entities</h2>
-          <ul>
-            {result.entities.map((e, i) => (
-              <li key={i} data-testid="entity-span">
-                <strong>{e.text}</strong> — {e.label} ({e.start}–{e.end})
-              </li>
-            ))}
-          </ul>
+
+          {result.entities.length === 0 ? (
+            <p>No entities found.</p>
+          ) : (
+            <ul>
+              {result.entities.map((entity, index) => (
+                <li key={`${entity.text}-${index}`} data-testid="entity-span">
+                  <strong>{entity.text}</strong> — {entity.label} (
+                  {entity.start}–{entity.end})
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
     </main>
