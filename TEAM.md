@@ -19,9 +19,9 @@ This file is the team roster artifact for the Module 10 four-service Docker Comp
 
 | Role                   | Team Member identifier | Assigned by        | Branch                    | Internal-PR reviewer | Primary files owned                                                                                                       |
 | ---------------------- | ---------------------- | ------------------ | ------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Backend lead           | `be-01`              | Instructional team | `backend/api-endpoints` | Frontend lead        | `api/main.py`, `api/models.py`, `api/rag.py`, `api/deps.py`, `api/Dockerfile`                                   |
-| Frontend lead          | `fe-01`              | Instructional team | `frontend/nextjs-pages` | Backend lead         | `web/pages/{extract,kg,rag}.tsx`, `web/lib/types.ts`, `web/Dockerfile`, `tests/frontend/playwright/*`             |
-| Infra-Integration lead | `infra-01`           | Instructional team | `infra/docker-compose`  | Backend lead         | `docker-compose.yml`, `seed_neo4j.sh`, `seed_weaviate.sh`, `.env.example`, `README.md`, `tests/integration/*` |
+| Backend lead           | **Naseem Migdadi**              | Instructional team | `backend/api-endpoints` | Frontend lead        | `api/main.py`, `api/models.py`, `api/rag.py`, `api/deps.py`, `api/Dockerfile`                                   |
+| Frontend lead          | **Raneem Alkaabneh**              | Instructional team | `frontend/nextjs-pages` | Backend lead         | `web/pages/{extract,kg,rag}.tsx`, `web/lib/types.ts`, `web/Dockerfile`, `tests/frontend/playwright/*`             |
+| Infra-Integration lead | **Mousa AL-Rashdan**           | Instructional team | `infra/docker-compose`  | Backend lead         | `docker-compose.yml`, `seed_neo4j.sh`, `seed_weaviate.sh`, `.env.example`, `README.md`, `tests/integration/*` |
 
 **Fallback compositions for non-3-Team-Member teams:**
 
@@ -114,7 +114,7 @@ WEB_ORIGIN=http://localhost:3000   NEXT_PUBLIC_API_URL=http://localhost:8000 (bu
 
 ### D) Per-role plan in detail
 
-#### 🟦 Backend lead — `backend/api-endpoints`
+#### �� Backend lead — `backend/api-endpoints`
 - **Tasks:** own and understand `api/` (already working); freeze the
   contract; optional hardening (per-call generator timeout, structured
   logging) **without** weakening grounding (must return the sentinel when
@@ -130,7 +130,7 @@ WEB_ORIGIN=http://localhost:3000   NEXT_PUBLIC_API_URL=http://localhost:8000 (bu
   ```
 - **Review duty:** reviews `infra/*` and `frontend/*` (contract guardian).
 
-#### 🟩 Frontend lead — `frontend/nextjs-pages` ⚠️ outstanding work is here
+#### �� Frontend lead — `frontend/nextjs-pages` ⚠️ outstanding work is here
 - **Critical task:** author the 3 Playwright specs (currently stubs → the
   `test_playwright_spec_authored` test is red and blocks submission). Turn
   `test.skip(` into `test(` — a skipped test passes silently and is rejected:
@@ -151,7 +151,7 @@ WEB_ORIGIN=http://localhost:3000   NEXT_PUBLIC_API_URL=http://localhost:8000 (bu
   npx playwright test ../tests/frontend/playwright    # the 3 specs green
   ```
 
-#### 🟨 Infra-Integration lead — `infra/docker-compose` ✅ complete & pushed
+#### �� Infra-Integration lead — `infra/docker-compose` ✅ complete & pushed
 - `docker-compose.yml` (4 services + healthchecks + depends_on chain + named
   volumes), `scripts/*` (idempotent), `.env.example`, the `README.md` runbook,
   `tests/integration/test_stack_e2e.py`, `TEAM.md`, `CONTRIBUTING.md` — all
